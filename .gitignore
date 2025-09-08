@@ -1,0 +1,3 @@
+# ignoring everything by default
+*
+# use `git add -f file` to forcefully add file
