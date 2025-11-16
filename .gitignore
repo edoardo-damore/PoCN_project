@@ -1,3 +1,8 @@
-# ignoring everything by default
-*
-# use `git add -f file` to forcefully add file
+# various servers or cache dirs
+*.vscode*
+*__marimo__*
+*__pycache__*
+
+# data dirs
+data
+raw
