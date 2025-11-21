@@ -1,87 +1,127 @@
-import marimo
+from pathlib import Path
 
-__generated_with = "0.17.8"
-app = marimo.App(
-    width="full",
-    css_file="/home/edoardo-damore/.local/share/motheme/themes/coldme.css",
-)
+import matplotlib.pyplot as plt
+import polars as pl
 
 
-@app.cell
-def _():
-    import marimo as mo
+class RawDataStorer:
+    """
+    Simple class to store and preprocess all the original data tables.
 
-    import matplotlib.pyplot as plt
-    import networkx as nx
-    import numpy as np
-    import polars as pl
+    # Parameters
+    :param paths: the paths where the tables are stored. A LazyFrame is created for each table.
+    :type paths: dict[str, Path]
+    :param configs: lists of Polars' expressions that are applyed to the corresponding LazyFrames.
+    :type configs: dict[str, list[pl.Expr]]
+    """
 
-    from pathlib import Path
-    from pydantic import validate_call
-    return Path, mo, pl, plt
+    def __init__(
+        self,
+        paths: dict[str, Path],
+        configs: dict[str, list[pl.Expr]],
+    ):
+        self.nodes = self._load(paths["nodes"], configs["nodes"])
+        self.stops = self._load(paths["stops"], configs["stops"])
+        self.cities = self._load(paths["cities"], configs["cities"])
+        self.groups = self._load(paths["groups"], configs["groups"])
+        self.edges = self._load(paths["edges"], configs["edges"])
+        return
+
+    def _load(self, path: Path, config: list[pl.Expr] | None) -> pl.LazyFrame:
+        lazy_df = pl.scan_csv(path, encoding="utf8-lossy", infer_schema_length=10000)
+        return self._sanitize(lazy_df, config)
+
+    def _sanitize(
+        self, lazy_df: pl.LazyFrame, config: list[pl.Expr] | None
+    ) -> pl.LazyFrame:
+        """ """
+        lazy_df = lazy_df.with_columns(config)
+        return lazy_df
 
 
-@app.cell
-def _(Path):
+def remap_id(
+    nodes: pl.LazyFrame,
+    edges: pl.LazyFrame,
+    old_id_name: str,
+    new_id_name: str,
+) -> tuple[pl.LazyFrame, pl.LazyFrame]:
+    if old_id_name not in nodes.collect_schema().keys():
+        raise ValueError(
+            f'old_id_name = "{old_id_name}" is not an existing column name'
+        )
+    if old_id_name == new_id_name:
+        raise ValueError("old_id_name and new_id_name must have different values")
+
+    mapping = (
+        nodes.select(pl.col(old_id_name))
+        .unique()
+        .with_columns(pl.col(old_id_name).rank("ordinal").alias(new_id_name))
+    )
+
+    nodes = nodes.join(mapping, on=old_id_name).drop(pl.col(old_id_name))
+
+    edges = (
+        edges.join(
+            mapping,
+            left_on=f"ori_{old_id_name}",
+            right_on=old_id_name,
+        )
+        .drop(pl.col(f"ori_{old_id_name}"))
+        .rename({new_id_name: f"ori_{new_id_name}"})
+        .join(
+            mapping,
+            left_on=f"des_{old_id_name}",
+            right_on=old_id_name,
+        )
+        .drop(pl.col(f"des_{old_id_name}"))
+        .rename({new_id_name: f"des_{new_id_name}"})
+    )
+    return nodes, edges
+
+
+def divide_by_city(
+    nodes: pl.LazyFrame, edges: pl.LazyFrame, cities: pl.Series, path: Path
+) -> None:
+    print("Generating nodes.csv and edges.csv for:")
+    for city in cities:
+        print(city)
+        local_nodes = nodes.filter(pl.col("city") == city)
+        local_edges = edges.join(
+            local_nodes.select(pl.col("node")),
+            left_on="ori_node",
+            right_on="node",
+        ).join(
+            local_nodes.select(pl.col("node")),
+            left_on="des_node",
+            right_on="node",
+        )
+        local_nodes, local_edges = remap_id(local_nodes, local_edges, "node", "nodeid")
+        local_nodes = local_nodes.select(
+            pl.col("nodeid"), pl.col("lat"), pl.col("lon"), pl.col("layer")
+        )
+        local_edges = local_edges.select(
+            pl.col("ori_nodeid"),
+            pl.col("des_nodeid"),
+            pl.col("ori_layer"),
+            pl.col("des_layer"),
+            pl.col("minutes"),
+            pl.col("km"),
+        )
+        city_dir = path / city
+        if not city_dir.exists() or not city_dir.is_dir():
+            city_dir.mkdir()
+        local_nodes.collect().write_csv(city_dir / "nodes.csv")
+        local_edges.collect().write_csv(city_dir / "edges.csv")
+    return
+
+
+def main() -> None:
     BASE_DIR = Path(__file__).parent.parent.parent
     RAW_DIR = BASE_DIR / "raw" / "task_42"
     DATA_DIR = BASE_DIR / "data" / "task_42"
     if not DATA_DIR.exists() or not DATA_DIR.is_dir():
         DATA_DIR.mkdir()
-    return (RAW_DIR,)
 
-
-@app.cell(hide_code=True)
-def _(mo):
-    mo.md(r"""
-    # Retrieval and cleaning
-    The first step is to retrieve the data and perform an immediate sanitization
-    """)
-    return
-
-
-@app.cell
-def _(Path, pl):
-    class RawDataStorer:
-        """
-        Simple class to store and preprocess all the original data tables.
-
-        # Parameters
-        :param paths: the paths where the tables are stored. A LazyFrame is created for each table.
-        :type paths: dict[str, Path]
-        :param configs: lists of Polars' expressions that are applyed to the corresponding LazyFrames.
-        :type configs: dict[str, list[pl.Expr]]
-        """
-
-        def __init__(
-            self,
-            paths: dict[str, Path],
-            configs: dict[str, list[pl.Expr]],
-        ):
-            self.nodes = self._load(paths["nodes"], configs["nodes"])
-            self.stops = self._load(paths["stops"], configs["stops"])
-            self.cities = self._load(paths["cities"], configs["cities"])
-            self.groups = self._load(paths["groups"], configs["groups"])
-            self.edges = self._load(paths["edges"], configs["edges"])
-            return
-
-        def _load(self, path: Path, config: list[pl.Expr] | None) -> pl.LazyFrame:
-            lazy_df = pl.scan_csv(
-                path, encoding="utf8-lossy", infer_schema_length=10000
-            )
-            return self._sanitize(lazy_df, config)
-
-        def _sanitize(
-            self, lazy_df: pl.LazyFrame, config: list[pl.Expr] | None
-        ) -> pl.LazyFrame:
-            """ """
-            lazy_df = lazy_df.with_columns(config)
-            return lazy_df
-    return (RawDataStorer,)
-
-
-@app.cell
-def _(RAW_DIR, RawDataStorer, pl):
     raw_data_paths = {
         "nodes": RAW_DIR / "nodes.csv",
         "stops": RAW_DIR / "NaPTAN_NPTG" / "Stops.csv",
@@ -108,60 +148,18 @@ def _(RAW_DIR, RawDataStorer, pl):
         ],
     }
     raw_data = RawDataStorer(raw_data_paths, raw_data_configs)
-    raw_data.edges.collect().head(10)
-    return (raw_data,)
 
-
-@app.cell(hide_code=True)
-def _(mo):
-    mo.md(r"""
-    # Creating the nodes
-    """)
-    return
-
-
-@app.cell
-def _(pl, raw_data):
-    big_cities = raw_data.cities.filter(pl.col("pop2025") > 50000)
-    all_nodes = raw_data.nodes.join(
-        raw_data.stops, left_on="atcocode", right_on="ATCOCode"
-    )
+    cities = raw_data.cities.filter(pl.col("pop2025") > 50000)
     nodes = pl.concat(
         [
-            raw_data.nodes.join(
-                raw_data.stops, left_on="atcocode", right_on="ATCOCode"
-            )
-            .join(big_cities, left_on=f"{locality_type}Locality", right_on="city")
+            raw_data.nodes.join(raw_data.stops, left_on="atcocode", right_on="ATCOCode")
+            .join(cities, left_on=f"{locality_type}Locality", right_on="city")
             .rename({f"{locality_type}Locality": "city"})
             .select(["node", "layer", "lat", "lon", "atcocode", "city"])
             for locality_type in ["GrandParent", "Parent", "NatGaz"]
         ]
     )
-    nodes.collect()
-    return big_cities, nodes
 
-
-@app.cell
-def _(big_cities, nodes, plt):
-    cities = big_cities.collect()
-    fig, ax = plt.subplots(figsize=(6, 6))
-    ax.scatter(nodes["lon"], nodes["lat"], marker=".", color="c", s=1)
-    ax.scatter(cities["longitude"], cities["latitude"], marker=".", color="r", s=5)
-
-    plt.show()
-    return
-
-
-@app.cell(hide_code=True)
-def _(mo):
-    mo.md(r"""
-    # Selecting the edges
-    """)
-    return
-
-
-@app.cell
-def _(nodes, raw_data):
     edges = (
         raw_data.edges.join(
             nodes, left_on=["ori_node", "ori_layer"], right_on=["node", "layer"]
@@ -182,98 +180,14 @@ def _(nodes, raw_data):
             ]
         )
     )
-    edges.collect()
-    return (edges,)
 
+    cities = cities.select(pl.col("city")).collect().to_series()
 
-@app.cell(hide_code=True)
-def _(mo):
-    mo.md(r"""
-    # Divide in cities
-    """)
-    return
-
-
-@app.cell
-def _(pl):
-    def remap_key(
-        data: pl.DataFrame,
-        col: str,
-        mapping: pl.DataFrame = None,
-        return_mapping: bool = False,
-    ) -> tuple[pl.DataFrame, pl.DataFrame] | pl.DataFrame:
-        """
-        Maps the specified column `col` into a new key
-
-        Args:
-            data (pl.DataFrame):
-            col (str):
-            mapping (pl.DataFrame, default = None): if `None` it will be generated automatically
-            return_mapping (bool, default = False):
-        Returns:
-            pl.DataFrame: the mapped `data`
-            pl.DataFrame (optional): the `mapping` (only if `return_mapping = True`)
-        """
-        if mapping is None:
-            key_values = data[col].unique()
-            mapping = pl.DataFrame(
-                [key_values, pl.arange(1, key_values.shape[0] + 1, eager=True)],
-                schema=[col, "newKey"],
-            )
-        mapped_data = data.join(mapping, on=col).drop(col).rename({"newKey": col})
-        if return_mapping:
-            return mapped_data, mapping
-        return mapped_data
-    return (remap_key,)
-
-
-@app.cell
-def _(data_path, os, pl, remap_key):
-    def divide_by_city(data: dict[str, pl.DataFrame]) -> None:
-        cities = (
-            data["cities"]
-            .filter(pl.col("pop2025") > 50000)
-            .get_column("city")
-            .to_list()
-        )
-        for city in cities:
-            localNodes = (
-                data["nodes"]
-                .rename({"ParentLocality": "city"})
-                .filter(pl.col("city") == city)
-            )
-            localEdges = data["edges"].filter(
-                (pl.col("ori_city") == city) | (pl.col("des_city") == city)
-            )
-            if localNodes.shape[0] > 0:
-                localNodes, mapping = remap_key(
-                    localNodes, "node", return_mapping=True
-                )
-                localEdges = localEdges.pipe(
-                    remap_key,
-                    "ori_node",
-                    mapping.rename({"node": "ori_node"}),
-                    return_mapping=False,
-                ).pipe(
-                    remap_key,
-                    "des_node",
-                    mapping.rename({"node": "des_node"}),
-                    return_mapping=False,
-                )
-            city_path = f"{data_path}/{city}"
-            if not os.path.isdir(city_path):
-                os.mkdir(city_path)
-            localNodes.write_csv(f"{city_path}/nodes.csv")
-            localEdges.write_csv(f"{city_path}/edges.csv")
-        return
-    return (divide_by_city,)
-
-
-@app.cell
-def _(divide_by_city, edges, nodes, raw_data_cities):
-    divide_by_city({"cities": raw_data_cities, "nodes": nodes, "edges": edges})
-    return
+    # given the high number of cities, we first collect the LazyFrames
+    # this ensures that all transformations until now are done only one time
+    # then we re-lazy them
+    divide_by_city(nodes.collect().lazy(), edges.collect().lazy(), cities, DATA_DIR)
 
 
 if __name__ == "__main__":
-    app.run()
+    main()
