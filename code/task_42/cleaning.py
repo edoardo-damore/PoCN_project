@@ -6,13 +6,7 @@ import polars as pl
 
 class RawDataStorer:
     """
-    Simple class to store and preprocess all the original data tables.
-
-    # Parameters
-    :param paths: the paths where the tables are stored. A LazyFrame is created for each table.
-    :type paths: dict[str, Path]
-    :param configs: lists of Polars' expressions that are applyed to the corresponding LazyFrames.
-    :type configs: dict[str, list[pl.Expr]]
+    _summary_
     """
 
     def __init__(
@@ -20,6 +14,14 @@ class RawDataStorer:
         paths: dict[str, Path],
         configs: dict[str, list[pl.Expr]],
     ):
+        """
+        _summary_
+
+        :param paths: _description_
+        :type paths: dict[str, Path]
+        :param configs: _description_
+        :type configs: dict[str, list[pl.Expr]]
+        """
         self.nodes = self._load(paths["nodes"], configs["nodes"])
         self.stops = self._load(paths["stops"], configs["stops"])
         self.cities = self._load(paths["cities"], configs["cities"])
@@ -28,13 +30,32 @@ class RawDataStorer:
         return
 
     def _load(self, path: Path, config: list[pl.Expr] | None) -> pl.LazyFrame:
+        """
+        _summary_
+
+        :param path: _description_
+        :type path: Path
+        :param config: _description_
+        :type config: list[pl.Expr] | None
+        :return: _description_
+        :rtype: pl.LazyFrame
+        """
         lazy_df = pl.scan_csv(path, encoding="utf8-lossy", infer_schema_length=10000)
         return self._sanitize(lazy_df, config)
 
     def _sanitize(
         self, lazy_df: pl.LazyFrame, config: list[pl.Expr] | None
     ) -> pl.LazyFrame:
-        """ """
+        """
+        _summary_
+
+        :param lazy_df: _description_
+        :type lazy_df: pl.LazyFrame
+        :param config: _description_
+        :type config: list[pl.Expr] | None
+        :return: _description_
+        :rtype: pl.LazyFrame
+        """
         lazy_df = lazy_df.with_columns(config)
         return lazy_df
 
@@ -45,6 +66,22 @@ def remap_id(
     old_id_name: str,
     new_id_name: str,
 ) -> tuple[pl.LazyFrame, pl.LazyFrame]:
+    """
+    _summary_
+
+    :param nodes: _description_
+    :type nodes: pl.LazyFrame
+    :param edges: _description_
+    :type edges: pl.LazyFrame
+    :param old_id_name: _description_
+    :type old_id_name: str
+    :param new_id_name: _description_
+    :type new_id_name: str
+    :raises ValueError: _description_
+    :raises ValueError: _description_
+    :return: _description_
+    :rtype: tuple[pl.LazyFrame, pl.LazyFrame]
+    """
     if old_id_name not in nodes.collect_schema().keys():
         raise ValueError(
             f'old_id_name = "{old_id_name}" is not an existing column name'
@@ -82,6 +119,18 @@ def remap_id(
 def divide_by_city(
     nodes: pl.LazyFrame, edges: pl.LazyFrame, cities: pl.Series, path: Path
 ) -> None:
+    """
+    _summary_
+
+    :param nodes: _description_
+    :type nodes: pl.LazyFrame
+    :param edges: _description_
+    :type edges: pl.LazyFrame
+    :param cities: _description_
+    :type cities: pl.Series
+    :param path: _description_
+    :type path: Path
+    """
     print("Generating nodes.csv and edges.csv for:")
     for city in cities:
         print(city)
