@@ -1,24 +1,32 @@
 import networkx as nx
 import random
 
-from typing import Any, Literal
+from typing import Any
+
+from custom_types import UGStrategy, WPDStrategy, UpdateRule
 
 
 class UltimatumGame:
     def __init__(
         self,
         g: nx.Graph,
-        game_strategy: Literal["EMP", "PRG", "RND"] = "RND",
+        game_strategy: UGStrategy = UGStrategy.RND,
         update_rule_distribution: list[float] | None = None,
     ) -> None:
-        if game_strategy not in ["EMP", "PRG", "RND"]:
+        if game_strategy not in UGStrategy:
             raise ValueError("game_strategy must be one of: EMP, PRG or RND")
+
+        if update_rule_distribution is not None and len(update_rule_distribution) != 3:
+            raise ValueError(
+                "update_rule_distribution should be either None or a list of length 3"
+            )
 
         # normalizing distributions
         if update_rule_distribution is not None and sum(update_rule_distribution) != 1:
             update_rule_distribution = [
                 p / sum(update_rule_distribution) for p in update_rule_distribution
             ]
+
         self.g = g
         self.game_strategy = game_strategy
         self.update_rule_distribution = update_rule_distribution
@@ -39,20 +47,21 @@ class UltimatumGame:
                 "p": random.random(),
                 "payoff": 0,
                 "update_rule": random.choices(
-                    ["REP", "UI", "MOR"], self.update_rule_distribution
+                    [update_rule for update_rule in UpdateRule],
+                    self.update_rule_distribution,
                 )[0],  # random.choices returns a list, even for just 1 element
             }
             for node in nodes
         }
 
         match self.game_strategy:
-            case "EMP":
+            case UGStrategy.EMP:
                 for node in attributes.keys():
                     attributes[node]["q"] = attributes[node]["p"]
-            case "PRG":
+            case UGStrategy.PRG:
                 for node in attributes.keys():
                     attributes[node]["q"] = 1 - attributes[node]["p"]
-            case "RND":
+            case UGStrategy.RND:
                 for node in attributes.keys():
                     attributes[node]["q"] = random.random()
         return attributes
@@ -61,11 +70,11 @@ class UltimatumGame:
 
     def _compute_single_payoff(self, i: int, j: int) -> float:
         node_i = self.g.nodes[i]
-        node_j = self.g.nodes[i]
+        node_j = self.g.nodes[j]
         # i offers to j
-        offerer_payoff = 1 - node_i["p"] if node_i["p"] <= node_j["q"] else 0
+        offerer_payoff = 1 - node_i["p"] if node_j["q"] <= node_i["p"] else 0
         # j offers to i
-        respondent_payoff = node_j["p"] if node_j["p"] <= node_i["q"] else 0
+        respondent_payoff = node_j["p"] if node_i["q"] <= node_j["p"] else 0
         return offerer_payoff + respondent_payoff
 
     def _game_step(self) -> None:
@@ -103,9 +112,9 @@ class UltimatumGame:
         if sum(payoffs) < 1e-6:
             return self.g.nodes[i]
 
-        p = [payoff / sum(payoffs) for payoff in payoffs]
+        prob = [payoff / sum(payoffs) for payoff in payoffs]
 
-        j = random.choices(neighbors, weights=p)[0]
+        j = random.choices(neighbors, weights=prob)[0]
         return self.g.nodes[j]
 
     def _SP(self) -> dict[int, dict[str, Any]]:
@@ -119,11 +128,11 @@ class UltimatumGame:
         for i in self.g.nodes():
             node_i = self.g.nodes[i]
             match node_i["update_rule"]:
-                case "REP":
+                case UpdateRule.REP:
                     new_state[i] = self._REP(i)
-                case "UI":
+                case UpdateRule.UI:
                     new_state[i] = self._UI(i)
-                case "MOR":
+                case UpdateRule.MOR:
                     new_state[i] = self._MOR(i)
         nx.set_node_attributes(self.g, new_state)
         return
@@ -143,14 +152,14 @@ class UltimatumGame:
     def get_payoff(self) -> list[float]:
         return list(nx.get_node_attributes(self.g, "payoff").values())
 
-    def get_update_rule(self) -> list[str]:
+    def get_update_rule(self) -> list[UpdateRule]:
         return list(nx.get_node_attributes(self.g, "update_rule").values())
 
     # SINGLE STEP (GAME + UPDATE)
 
     def step(
         self, get_distributions: bool = False
-    ) -> tuple[list[float], list[float], list[float], list[str]] | None:
+    ) -> tuple[list[float], list[float], list[float], list[UpdateRule]] | None:
         self._reset_payoff()
         self._game_step()
 
@@ -177,12 +186,20 @@ class WeakPrisonerDilemmaGame:
         action_distribution: list[float] | None = None,
         update_rule_distribution: list[float] | None = None,
     ) -> None:
+        if action_distribution is not None and len(action_distribution) != 2:
+            raise ValueError(
+                "action_distribution should be either None or a list of length 2"
+            )
+        if update_rule_distribution is not None and len(update_rule_distribution) != 3:
+            raise ValueError(
+                "update_rule_distribution should be either None or a list of length 3"
+            )
+
         # normalizing distributions
         if action_distribution is not None and sum(action_distribution) != 1:
             action_distribution = [
                 p / sum(action_distribution) for p in action_distribution
             ]
-
         if update_rule_distribution is not None and sum(update_rule_distribution) != 1:
             update_rule_distribution = [
                 p / sum(update_rule_distribution) for p in update_rule_distribution
@@ -206,10 +223,13 @@ class WeakPrisonerDilemmaGame:
 
         attributes = {
             node: {
-                "action": random.choices([0, 1], self.action_distribution)[0],
+                "action": random.choices(
+                    [action for action in WPDStrategy], self.action_distribution
+                )[0],
                 "payoff": 0,
                 "update_rule": random.choices(
-                    ["REP", "UI", "MOR"], self.update_rule_distribution
+                    [update_rule for update_rule in UpdateRule],
+                    self.update_rule_distribution,
                 )[0],  # random.choices returns a list, even for just 1 element
             }
             for node in nodes
@@ -268,11 +288,11 @@ class WeakPrisonerDilemmaGame:
         for i in self.g.nodes():
             node_i = self.g.nodes[i]
             match node_i["update_rule"]:
-                case "REP":
+                case UpdateRule.REP:
                     new_state[i] = self._REP(i)
-                case "UI":
+                case UpdateRule.UI:
                     new_state[i] = self._UI(i)
-                case "MOR":
+                case UpdateRule.MOR:
                     new_state[i] = self._MOR(i)
         nx.set_node_attributes(self.g, new_state)
         return
@@ -289,14 +309,14 @@ class WeakPrisonerDilemmaGame:
     def get_payoff(self) -> list[float]:
         return list(nx.get_node_attributes(self.g, "payoff").values())
 
-    def get_update_rule(self) -> list[str]:
+    def get_update_rule(self) -> list[UpdateRule]:
         return list(nx.get_node_attributes(self.g, "update_rule").values())
 
     # SINGLE STEP (GAME + UPDATE)
 
     def step(
         self, get_distributions: bool = False
-    ) -> tuple[list[int], list[float], list[str]] | None:
+    ) -> tuple[list[int], list[float], list[UpdateRule]] | None:
         self._reset_payoff()
         self._game_step()
 
