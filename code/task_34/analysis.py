@@ -73,8 +73,8 @@ def plot_strategy_frequency(
     data = pl.read_csv(data_path).to_numpy()
     strat_freqencies = {
         game_strat.name: {
-            "mean": data[:, i],
-            "std": data[:, i + 1],
+            "mean": data[:, 2 * i],
+            "std": data[:, 2 * i + 1],
         }
         for i, game_strat in enumerate(UGStrategy)
     }
@@ -110,15 +110,21 @@ def plot_update_rule_distribution(
 ):
     data = pl.read_csv(data_path).to_numpy()
     retrieval_time = data[0, 1:]
-    N = np.sum(data[1:, 1])
 
     fig, ax = plt.subplots()
 
+    offset = np.array(retrieval_time) / 10
     for i, update_rule in enumerate(UpdateRule):
         ax.errorbar(
-            retrieval_time, data[i + 1, 1:] / N, fmt="o-", label=f"{update_rule.name}"
+            retrieval_time + offset * i,
+            data[2 * i + 1, 1:],
+            yerr=data[2 * i + 2, 1:],
+            fmt="o-",
+            capsize=2,
+            label=f"{update_rule.name}",
         )
 
+    ax.set_ylim(0, 1)
     ax.set_xscale("log")
     ax.set_xlabel(r"$t$")
     ax.set_ylabel("fraction")
@@ -128,24 +134,34 @@ def plot_update_rule_distribution(
     return
 
 
-"""
-    width = 0.8 / len(retrieval_time)
-    mult = -(len(retrieval_time) - 1) / 2
-    for i, t in enumerate(retrieval_time):
-        offset = mult * width
-        ax.bar(
-            np.arange(len(UpdateRule)) + offset,
-            data[1:, i + 1] / N,
-            width=width,
-            edgecolor="black",
-            capsize=2,
-            label=rf"$t={int(t)}$",
-        )
-        mult += 1
-    ax.set_xticks(np.arange(len(UpdateRule)))
-    ax.set_xticklabels([update_rule.name for update_rule in UpdateRule])
-    # ax.set_xticks([update_rule.name for update_rule in UpdateRule])
-    # ax.set_ylabel("average fraction over all nodes")
+def plot_avg_strat_over_degree(
+    data_path: Path,
+    file_path: Path,
+):
+    data = pl.read_csv(data_path).to_numpy()
+
+    fig, ax = plt.subplots()
+
+    nonzero = np.sum(data[1:, :] > 0, axis=0)
+    nonzero = np.where(nonzero > 0, nonzero, 1)
+    x = data[0, :]
+    y = np.sum(data[1:, :], axis=0) / nonzero
+
+    x = x[y > 0]
+    y = y[y > 0]
+    ax.errorbar(
+        x,
+        y,
+        # yerr=np.std(data[1:, :], axis=0),
+        fmt="o",
+        capsize=2,
+    )
+
     ax.set_ylim(0, 1)
-    ax.legend(frameon=False)
-    """
+    ax.set_xscale("log")
+    ax.set_xlabel(r"$k$")
+    ax.set_ylabel(r"$<p>_k$")
+    # ax.legend(frameon=False)
+    fig.tight_layout()
+    fig.savefig(file_path)
+    return

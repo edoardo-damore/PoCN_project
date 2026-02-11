@@ -1,5 +1,6 @@
 import numpy as np
 import polars as pl
+import random
 
 from pathlib import Path
 
@@ -58,7 +59,7 @@ def save_ug_strat_distribution(
     return
 
 
-def save_ug_update_rule_distribution(
+def _save_ug_update_rule_distribution(
     results: dict[UGStrategy, list[ResultsDict]],
     dir_path: Path,
 ):
@@ -92,6 +93,39 @@ def save_ug_update_rule_distribution(
     return
 
 
+def save_ug_update_rule_distribution(
+    results: dict[UGStrategy, list[ResultsDict]],
+    dir_path: Path,
+):
+    retrieval_time = list(results[UGStrategy.EMP][0].keys())
+    N = results[UGStrategy.EMP][0][retrieval_time[-1]]["update_rule"].shape[0]
+
+    for game_strategy in UGStrategy:
+        strat_results = results[game_strategy]
+        dist = np.zeros(shape=(2 * len(UpdateRule) + 1, len(retrieval_time) + 1))
+        dist[0, 1:] = np.array(retrieval_time)
+        for i, update_rule in enumerate(UpdateRule):
+            dist[2 * i + 1 : 2 * i + 3, 0] = update_rule.value
+        counts = np.zeros((len(UpdateRule), len(retrieval_time), len(strat_results)))
+        for k, result in enumerate(strat_results):
+            for i, t in enumerate(retrieval_time):
+                for j, update_rule in enumerate(UpdateRule):
+                    counts[j, i, k] = (
+                        np.sum(result[t]["update_rule"] == update_rule) / N
+                    )
+        for i, update_rule in enumerate(UpdateRule):
+            dist[2 * i + 1, 1:] = np.mean(counts[i, :, :], axis=1)
+            dist[2 * i + 2, 1:] = np.std(counts[i, :, :], axis=1)
+
+        strat_df = pl.DataFrame(
+            dist,
+            schema=["update_rule"] + [f"t_{i}" for i in range(len(retrieval_time))],
+        )
+        strat_df.write_csv(dir_path / f"{game_strategy.name}_update_rule_dist.csv")
+
+    return
+
+
 def save_strategy_space(
     results: dict[UGStrategy, list[ResultsDict]],
     dir_path: Path,
@@ -114,7 +148,7 @@ def save_strategy_space(
     return
 
 
-def save_degree_of_selection(
+def save_strategy_frequency(
     results: dict[UGStrategy, list[ResultsDict]],
     dir_path: Path,
     max_strategies: int = 10,
@@ -166,4 +200,35 @@ def save_degree_of_selection(
         ],
     )
     df.write_csv(dir_path / "strat_freq.csv")
+    return
+
+
+def save_average_strategy_over_degree(
+    results: dict[UGStrategy, list[ResultsDict]],
+    dir_path: Path,
+):
+    retrieval_time = list(results[UGStrategy.EMP][0].keys())
+    t = retrieval_time[-1]
+
+    for game_strat in UGStrategy:
+        strat_results = results[game_strat]
+        N = strat_results[0][t]["strategy"].shape[0]
+        avg_p = np.arange(N).reshape(1, -1)
+        for i in range(len(strat_results)):
+            result = strat_results[i][t]
+            degrees = np.array(result["degree"])
+            p = result["strategy"][:, 0]
+            # q = result["strategy"][:, 1]
+            counts = np.where(
+                np.bincount(degrees, minlength=N) > 0,
+                np.bincount(degrees, minlength=N),
+                1,
+            )
+            avg_p = np.concat(
+                [avg_p, (np.bincount(degrees, p, minlength=N) / counts).reshape(1, -1)],
+                axis=0,
+            )
+            # avg_q = np.bincount(degrees, q, minlength=N) / counts
+        df = pl.DataFrame(avg_p)
+        df.write_csv(dir_path / f"{game_strat.name}_avg_strat_over_degree.csv")
     return

@@ -12,6 +12,7 @@ from analysis import (
     plot_strategy_space,
     plot_strategy_frequency,
     plot_update_rule_distribution,
+    plot_avg_strat_over_degree,
 )
 from custom_types import UGStrategy, WPDStrategy, UpdateRule, ResultsDict
 from games import (
@@ -26,9 +27,10 @@ from generators import (
 )
 from utils import (
     save_ug_strat_distribution,
-    save_degree_of_selection,
+    save_strategy_frequency,
     save_strategy_space,
     save_ug_update_rule_distribution,
+    save_average_strategy_over_degree,
 )
 
 plt.rcParams.update({"text.usetex": True, "font.family": "serif", "font.size": 18})
@@ -96,7 +98,7 @@ def run_full_ultimatum_game(
 ) -> dict[UGStrategy, list[ResultsDict]]:
     results = {}
     for game_strategy in UGStrategy:
-        results[game_strategy] = Parallel(n_jobs=-1, verbose=10)(
+        results[game_strategy] = Parallel(n_jobs=-3, verbose=10)(
             delayed(
                 lambda: run_single_ultimatum_game(
                     generator,
@@ -140,14 +142,14 @@ def run_full_wpd_game(
 
 def main():
     net_type = "ba"
-    N = 1000
+    N = 10000
     k = 4
     l = 8
-    p_in = 0.025
-    p_out = 0.2
+    p_in = 0.2
+    p_out = 0.05
     p = 0.01
     iterations_per_network = 10000
-    iterations_per_game_strategy = 10
+    iterations_per_game_strategy = 100
     retrieval_time = [10**n for n in range(10) if 10**n <= iterations_per_network]
 
     def generator():
@@ -176,8 +178,10 @@ def main():
 
         save_ug_strat_distribution(results, DATA_PATH, 20)
         save_strategy_space(results, DATA_PATH)
-        save_degree_of_selection(results, DATA_PATH)
+        save_strategy_frequency(results, DATA_PATH)
         save_ug_update_rule_distribution(results, DATA_PATH)
+        if net_type == "ba":
+            save_average_strategy_over_degree(results, DATA_PATH)
 
     FIGURE_PATH = Path("figures") / net_type
     if not FIGURE_PATH.exists():
@@ -215,6 +219,20 @@ def main():
     plot_update_rule_distribution(
         DATA_PATH / "RND_update_rule_dist.csv", FIGURE_PATH / "RND_update_rule_dist.png"
     )
+
+    if net_type == "ba":
+        plot_avg_strat_over_degree(
+            DATA_PATH / "EMP_avg_strat_over_degree.csv",
+            FIGURE_PATH / "EMP_avg_strat_over_degree.png",
+        )
+        plot_avg_strat_over_degree(
+            DATA_PATH / "PRG_avg_strat_over_degree.csv",
+            FIGURE_PATH / "PRG_avg_strat_over_degree.png",
+        )
+        plot_avg_strat_over_degree(
+            DATA_PATH / "RND_avg_strat_over_degree.csv",
+            FIGURE_PATH / "RND_avg_strat_over_degree.png",
+        )
     return
 
 
