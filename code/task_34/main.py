@@ -24,6 +24,7 @@ from generators import (
     generate_erdos_renyi,
     generate_hierarchical_sbm,
     generate_watts_strogatz,
+    generate_real_world,
 )
 from utils import (
     save_ug_strat_distribution,
@@ -33,7 +34,7 @@ from utils import (
     save_average_strategy_over_degree,
 )
 
-plt.rcParams.update({"text.usetex": True, "font.family": "serif", "font.size": 18})
+# plt.rcParams.update({"text.usetex": True, "font.family": "serif", "font.size": 18})
 
 
 def run_single_ultimatum_game(
@@ -98,7 +99,7 @@ def run_full_ultimatum_game(
 ) -> dict[UGStrategy, list[ResultsDict]]:
     results = {}
     for game_strategy in UGStrategy:
-        results[game_strategy] = Parallel(n_jobs=-3, verbose=10)(
+        results[game_strategy] = Parallel(n_jobs=-1, verbose=10)(
             delayed(
                 lambda: run_single_ultimatum_game(
                     generator,
@@ -141,12 +142,12 @@ def run_full_wpd_game(
 
 
 def main():
-    net_type = "ba"
-    N = 10000
-    k = 4
+    net_type = "rw"
+    N = 5000
+    k = 8
     l = 8
-    p_in = 0.2
-    p_out = 0.05
+    p_in = 0.1
+    p_out = 0.035
     p = 0.01
     iterations_per_network = 10000
     iterations_per_game_strategy = 100
@@ -162,12 +163,17 @@ def main():
                 return generate_hierarchical_sbm(N // l, l, p_in, p_out)
             case "ws":
                 return generate_watts_strogatz(N, k, p)
+            case "rw":
+                return generate_real_world(Path("inf-power") / "inf-power.mtx")
 
+    DATA_PATH = Path("data")
+    if not DATA_PATH.exists():
+        DATA_PATH.mkdir()
     DATA_PATH = Path("data") / net_type
     if not DATA_PATH.exists():
         DATA_PATH.mkdir()
 
-    run_simulations = False
+    run_simulations = True
     if run_simulations:
         results = run_full_ultimatum_game(
             generator,
@@ -180,9 +186,12 @@ def main():
         save_strategy_space(results, DATA_PATH)
         save_strategy_frequency(results, DATA_PATH)
         save_ug_update_rule_distribution(results, DATA_PATH)
-        if net_type == "ba":
+        if net_type == "ba" or net_type == "rw":
             save_average_strategy_over_degree(results, DATA_PATH)
 
+    FIGURE_PATH = Path("figures")
+    if not FIGURE_PATH.exists():
+        FIGURE_PATH.mkdir()
     FIGURE_PATH = Path("figures") / net_type
     if not FIGURE_PATH.exists():
         FIGURE_PATH.mkdir()
@@ -220,7 +229,7 @@ def main():
         DATA_PATH / "RND_update_rule_dist.csv", FIGURE_PATH / "RND_update_rule_dist.png"
     )
 
-    if net_type == "ba":
+    if net_type == "ba" or net_type == "rw":
         plot_avg_strat_over_degree(
             DATA_PATH / "EMP_avg_strat_over_degree.csv",
             FIGURE_PATH / "EMP_avg_strat_over_degree.png",
