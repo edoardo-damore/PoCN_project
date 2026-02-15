@@ -1,13 +1,12 @@
 import matplotlib.pyplot as plt
 import networkx as nx
 import numpy as np
-import random
 
 from joblib import Parallel, delayed
 from pathlib import Path
-from typing import Literal, Any, Callable
+from typing import Any, Callable
 
-from analysis import (
+from visualization import (
     plot_strategy_distribution,
     plot_strategy_space,
     plot_strategy_frequency,
@@ -34,7 +33,17 @@ from utils import (
     save_average_strategy_over_degree,
 )
 
-# plt.rcParams.update({"text.usetex": True, "font.family": "serif", "font.size": 18})
+plt.rcParams.update(
+    {
+        "text.usetex": True,
+        "font.family": "serif",
+        "font.size": 18,
+        "text.latex.preamble": r"""
+        \usepackage{amsmath}
+        \usepackage{braket}
+""",
+    }
+)
 
 
 def run_single_ultimatum_game(
@@ -142,7 +151,11 @@ def run_full_wpd_game(
 
 
 def main():
-    net_type = "rw"
+    # run options
+    net_type = "rw" # choose between: ba, er, sbm, ws, rw
+    run_simulations = False # False if you only want to plot, given that the simulation already ran
+    
+    # run parameters
     N = 5000
     k = 8
     l = 8
@@ -173,7 +186,6 @@ def main():
     if not DATA_PATH.exists():
         DATA_PATH.mkdir()
 
-    run_simulations = True
     if run_simulations:
         results = run_full_ultimatum_game(
             generator,
