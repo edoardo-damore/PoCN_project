@@ -43,7 +43,7 @@ Along with $p_j$ and $q_j$, the update rule is also adopted.
  
 \section{Simulation results}
 
-Four network topologies where considered: Erdos-Reyni (ER), Barabasi-Albert (BA), Stochastic-block-model (SBM) and the real-world network of Western States Power Grids of the United States (RW) (see appendix for RW).
+Four network topologies where considered: Erdos-Reyni (ER), Barabasi-Albert (BA), Stochastic-block-model (SBM) and the real-world network of Western States Power Grids of the United States (RW) (see appendix \ref{app:rw} for RW).
 All of these networks have $N = 5000$ nodes.
 
 \paragraph{EMP and PRG players} 
@@ -185,5 +185,6 @@ BA networks, as seen before, have most of their small degree nodes follow the sa
 
 Simulation results show that the evolution of game strategies greatly depends on the network's structure.
 Players in homogeneos network tend to converge to a smaller set of strategies with respect to players on scale-free networks, where instead high-degree nodes show a much greater range of values for $(p, q)$.
+Additionally, as can be seen in appendix \ref{app:additional_results}, ER and SBM networks tend to greatly favor the REP update rule, while BA ones allow for more competition, particularly between REP and UI.
 
 \newpage
