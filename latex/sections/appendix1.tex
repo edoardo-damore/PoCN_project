@@ -1,0 +1,113 @@
+\chapter{Task 34}
+
+\section{Additional results}
+
+\paragraph{Update rule distributions}
+Figures \ref{fig:emp_ur_dist}, \ref{fig:prg_ur_dist} and \ref{fig:rnd_ur_dist} show how homogeneous networks tend to overwhelmingly prefer the REP update rule against the other two.
+Barabasi-Albert networks however show more variability and allow also the UI update rule to be competitive, while still favoring the REP one.
+
+\begin{figure}[h!]
+    \centering
+    \begin{subfigure}{0.3\textwidth}
+        \includegraphics[width = \textwidth]{images/task_34/er/EMP_update_rule_dist.png}
+        \caption{ER}
+    \end{subfigure}
+    \hfill
+    \begin{subfigure}{0.3\textwidth}
+        \includegraphics[width = \textwidth]{images/task_34/sbm/EMP_update_rule_dist.png}
+        \caption{SBM}
+    \end{subfigure}
+    \hfill
+    \begin{subfigure}{0.3\textwidth}
+        \includegraphics[width = \textwidth]{images/task_34/ba/EMP_update_rule_dist.png}
+        \caption{BA}
+    \end{subfigure}
+    \caption{Update rule distribution over time for EMP players.}
+    \label{fig:emp_ur_dist}
+\end{figure}
+
+
+\begin{figure}[h!]
+    \centering
+    \begin{subfigure}{0.3\textwidth}
+        \includegraphics[width = \textwidth]{images/task_34/er/PRG_update_rule_dist.png}
+        \caption{ER}
+    \end{subfigure}
+    \hfill
+    \begin{subfigure}{0.3\textwidth}
+        \includegraphics[width = \textwidth]{images/task_34/sbm/PRG_update_rule_dist.png}
+        \caption{SBM}
+    \end{subfigure}
+    \hfill
+    \begin{subfigure}{0.3\textwidth}
+        \includegraphics[width = \textwidth]{images/task_34/ba/PRG_update_rule_dist.png}
+        \caption{BA}
+    \end{subfigure}
+    \caption{Update rule distribution over time for PRG players.}
+    \label{fig:prg_ur_dist}
+\end{figure}
+
+\begin{figure}[h!]
+    \centering
+    \begin{subfigure}{0.3\textwidth}
+        \includegraphics[width = \textwidth]{images/task_34/er/RND_update_rule_dist.png}
+        \caption{ER}
+    \end{subfigure}
+    \hfill
+    \begin{subfigure}{0.3\textwidth}
+        \includegraphics[width = \textwidth]{images/task_34/sbm/RND_update_rule_dist.png}
+        \caption{SBM}
+    \end{subfigure}
+    \hfill
+    \begin{subfigure}{0.3\textwidth}
+        \includegraphics[width = \textwidth]{images/task_34/ba/RND_update_rule_dist.png}
+        \caption{BA}
+    \end{subfigure}
+    \caption{Update rule distribution over time for RND players.}
+    \label{fig:rnd_ur_dist}
+\end{figure}
+
+
+\section{Simulation on a real-world network}
+The Ultimatum Game has been run also on the network of the Western States Power Grid of the United States \cite{watts1998collective} \cite{nr}.
+Here are reported the figures relative to $D(p)$ (figure \ref{fig:rw_p_dist}) and the update rule distribution over time (figure \ref{fig:rw_ur_dist}).
+
+\begin{figure}[h!]
+    \centering
+    \begin{subfigure}{0.3\textwidth}
+        \includegraphics[width = \textwidth]{images/task_34/rw/EMP_p_dist.png}
+        \caption{EMP}
+    \end{subfigure}
+    \hfill
+    \begin{subfigure}{0.3\textwidth}
+        \includegraphics[width = \textwidth]{images/task_34/rw/PRG_p_dist.png}
+        \caption{PRG}
+    \end{subfigure}
+    \hfill
+    \begin{subfigure}{0.3\textwidth}
+        \includegraphics[width = \textwidth]{images/task_34/rw/RND_p_dist.png}
+        \caption{RND}
+    \end{subfigure}
+    \caption{$D(p)$ in the real-world network.}
+    \label{fig:rw_p_dist}
+\end{figure}
+
+\begin{figure}[h!]
+    \centering
+    \begin{subfigure}{0.3\textwidth}
+        \includegraphics[width = \textwidth]{images/task_34/rw/EMP_update_rule_dist.png}
+        \caption{EMP}
+    \end{subfigure}
+    \hfill
+    \begin{subfigure}{0.3\textwidth}
+        \includegraphics[width = \textwidth]{images/task_34/rw/PRG_update_rule_dist.png}
+        \caption{PRG}
+    \end{subfigure}
+    \hfill
+    \begin{subfigure}{0.3\textwidth}
+        \includegraphics[width = \textwidth]{images/task_34/rw/RND_update_rule_dist.png}
+        \caption{RND}
+    \end{subfigure}
+    \caption{Update rule distribution over time in the real-world network.}
+    \label{fig:rw_ur_dist}
+\end{figure}

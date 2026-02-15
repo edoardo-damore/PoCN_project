@@ -1,0 +1,99 @@
+\chapter{Task 42: Public transport in UK}
+
+\resp{Edoardo D'Amore}
+
+\section{Dataset}
+
+The objective of this task is to divide by city the dataset provided by  \cite{Gallotti2015}.
+
+The tables considered are:
+\begin{itemize}
+    \item \texttt{nodes}: contains nodes corresponding to the stops in public transport.
+    \item \texttt{edges}: contains the connections between the nodes.
+    \item \texttt{stops}: contains geographical information about the nodes.
+    \item \texttt{cities}: contains all cities in the United Kingdom with a population of at least 50 thousands people \cite{pop2026}.
+\end{itemize}
+
+\section{Data processing}
+
+The first step has been the sanitization of the tables, which consisted mainly in reformatting specific columns in order to correctly cast them to numerical values.
+
+In order to collect all nodes related to a city, the following pipeline has been followed:
+\begin{enumerate}
+    \item join the \texttt{nodes} and the \texttt{stops} tables on the \texttt{ATCOCode} attribute. If one the \texttt{cities} is present in either the \texttt{NatGazLocality}, the \texttt{ParentLocality} or the \texttt{GrandParentLocality} attributes, then it is assigned to the node.
+    \item nodes that are within a 0.5Km radius from eachother are assigned to the same group. Groups are divided based on how many different cities their nodes are assigned to:
+    \begin{itemize}
+        \item 0: the group is discarded;
+        \item 1: the group is classified as ``safe'';
+        \item 2 or more: the group is classified as ``unsafe''.
+    \end{itemize}
+    \item nodes in the ``safe'' groups are all assigned to the same city.
+    \item nodes in the ``unsafe'' groups are assigned to the same city of the node they are closest to.
+\end{enumerate}
+
+To obtain the edges it is sufficient to filter the \texttt{edges} table by considering only the links between two nodes previously retrieved.
+
+For each city, two files are produced: \texttt{nodes.csv} and \texttt{edges.csv}.
+Note that, for some cities, it was not possible to correctly retrieve any node by following this procedure.
+
+\section{Basic analysis}
+
+In this section we will consider the networks of three cities in the United Kingdom: London, Birmingham and Liverpool.
+
+\paragraph{Degree distribution}
+From figure \ref{fig:degree_dist} it is possible to observe that the three networks show similar degree distribution.
+%($P(k) \sim k^{-\gamma}$), respectively with $\gamma_{\text{London}} = ...$, $\gamma_{\text{Birmingham}} = ...$ and $\gamma_{\text{Liverpool}} = ...$.
+
+\begin{figure}[h!]
+    \centering
+    \includegraphics[width=0.7\textwidth]{images/task_42/degree_distributions.png}
+    \caption{Degree distributions.}
+    \label{fig:degree_dist}
+\end{figure}
+
+\paragraph{Assortativity coefficients}
+Even though these are directed networks, most of the links are reciprocated, resulting in similar values for the assortativity coefficients (table \ref{tab:assortativity}).
+
+\begin{table}[h!]
+    \centering
+    \begin{tabular}{|c|c|c|c|c|}
+        \hline
+        City & $r^{(\mathrm{out}, \mathrm{out})}$ & $r^{(\mathrm{in}, \mathrm{out})}$ & $r^{(\mathrm{out}, \mathrm{in})}$ & $r^{(\mathrm{in}, \mathrm{in})}$ \\
+        \hline
+        London & 0.28 & 0.27 & 0.28 & 0.27 \\
+        Birmingham & 0.28 & 0.30 & 0.29 & 0.29 \\
+        Liverpool & 0.26 & 0.28 & 0.26 & 0.25 \\
+        \hline
+    \end{tabular}
+    \caption{Assortativity coefficients.}
+    \label{tab:assortativity}
+\end{table}
+
+\paragraph{Centrality measures}
+Figures \ref{fig:closeness} and \ref{fig:betweenness} show the closeness and betweenness centrality measures respectively, for each node in the three networks.
+
+\begin{figure}[h!]
+    \centering
+    \includegraphics[width = \textwidth]{images/task_42/closeness.png}
+    \caption{Closeness centrality.}
+    \label{fig:closeness}
+\end{figure}
+
+\begin{figure}[h!]
+    \centering
+    \includegraphics[width=\textwidth]{images/task_42/betweenness.png}
+    \caption{Betweenness centrality.}
+    \label{fig:betweenness}
+\end{figure}
+
+\paragraph{Nearest-neighbors' average degree}
+In figure \ref{fig:nn_ad_dist} we can observe how the results are quite analougous for the three cities, with London having on average higher values.
+
+\begin{figure}[h!]
+    \centering
+    \includegraphics[width=0.7\textwidth]{images/task_42/adc.png}
+    \caption{Nearest-neighbors' average degree.}
+    \label{fig:nn_ad_dist}
+\end{figure}
+
+\newpage

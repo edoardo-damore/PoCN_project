@@ -1,0 +1,189 @@
+\chapter{Task 34: Game Theory on networks}
+
+\resp{Edoardo D'Amore}
+
+\section{Ultimatum Game}
+
+The Ultimatum Game \cite{Sinatra_2009} is a game where two players, an \textit{offerer} and a \textit{respondent}, bargain in order to divide a fixed reward (we will consider it as 1) between them.
+Each player $i$ is characterized by two parameters:
+\begin{itemize}
+    \item the \textbf{offer ratio} $p_i$, which corresponds to the fraction of the total reward that the offerer proposes to the respondent;
+    \item the \textbf{acceptance threshold} $q_i$, which is the minimum fraction the respondent is willing to accept.
+\end{itemize}
+We have considered three ways to initialize these parameters:
+\begin{itemize}
+    \item \textbf{empathetic} (EMP): $q_i = p_i$;
+    \item \textbf{pragmatic} (PRG): $q_i = 1 - p_i$;
+    \item \textbf{random} (RND): $p_i$ and $q_i$ are independent.
+\end{itemize}
+In our setting each player will correspond to a node in a network.
+Each node will interact with all of its neighbors each round and play two games with any of them: one where it acts as the offerer and one where it acts as the respondent.
+After a round is finished, the \textbf{payoffs} are computed for each player:
+\begin{equation}
+\Pi_i = \sum_{j \in \mathcal{N}_i} (\Delta \Pi_{ij}^O + \Delta \Pi_{ij}^R)
+\end{equation}
+where $\mathcal{N}_i$ is the set of neighbors of node $i$, $\Delta \Pi_{ij}^O$ and $\Delta \Pi_{ij}^R$ are the payoffs resulting from the interactions between node $i$ and node $j$, where $i$ acted as the offerer and the respondent respectively.
+Afterwards each player will update its parameters based on its \textbf{update rule} \cite{Cardillo_2010}:
+\begin{itemize}
+    \item REP: a node $j \in \mathcal{N}_i$ is selected randomly. If $\Pi_j > \Pi_i$ then node $i$ will copy node $j$'s strategy with probability:
+    \begin{equation*}
+        P_{ij} = \frac{\Pi_j - \Pi_i}{2 \max\{k_i, k_j\}}
+    \end{equation*}
+    
+    \item UI: the node $j = \underset{j \in \mathcal{N}_i}{\mathrm{argmax}} \; \Pi_j$ is selected. If $\Pi_j > \Pi_i$ then node $i$ copies its strategy.
+    
+    \item MOR: node $i$ copies the strategy of node $j \in \mathcal{N}_i$ with probability:
+    \begin{equation*}
+        P_{ij} = \frac{\Pi_j}{\sum_{l \in \mathcal{N}_i} \Pi_l}
+    \end{equation*}
+\end{itemize}
+Along with $p_j$ and $q_j$, the update rule is also adopted.
+
+
+ 
+\section{Simulation results}
+
+Four network topologies where considered: Erdos-Reyni (ER), Barabasi-Albert (BA), Stochastic-block-model (SBM) and the real-world network of Western States Power Grids of the United States (RW) (see appendix for RW).
+All of these networks have $N = 5000$ nodes.
+
+\paragraph{EMP and PRG players} 
+From figures \ref{fig:emp_p_dist} and \ref{fig:prg_p_dist} we can observe how homogeneous networks (ER and SBM) tend to have a single clear peak for $D(p)$.
+BA networks, on the other hand, show a much more varied landscape of $D(p)$, and it can be seen that this variability is mainly present in higher degree nodes ($k \gtrsim 10$), as shown in figure \ref{fig:avg_p_over_k}.
+
+\begin{figure}[h!]
+    \centering
+    \begin{subfigure}{0.3\textwidth}
+        \includegraphics[width = \textwidth]{images/task_34/er/EMP_p_dist.png}
+        \caption{ER}
+    \end{subfigure}
+    \hfill
+    \begin{subfigure}{0.3\textwidth}
+        \includegraphics[width = \textwidth]{images/task_34/sbm/EMP_p_dist.png}
+        \caption{SBM}
+    \end{subfigure}
+    \hfill
+    \begin{subfigure}{0.3\textwidth}
+        \includegraphics[width = \textwidth]{images/task_34/ba/EMP_p_dist.png}
+        \caption{BA}
+    \end{subfigure}
+    \caption{Distribution of $p$ for EMP players.}
+    \label{fig:emp_p_dist}
+\end{figure}
+
+\begin{figure}[h!]
+    \centering
+    \begin{subfigure}{0.3\textwidth}
+        \includegraphics[width = \textwidth]{images/task_34/er/PRG_p_dist.png}
+        \caption{ER}
+    \end{subfigure}
+    \hfill
+    \begin{subfigure}{0.3\textwidth}
+        \includegraphics[width = \textwidth]{images/task_34/sbm/PRG_p_dist.png}
+        \caption{SBM}
+    \end{subfigure}
+    \hfill
+    \begin{subfigure}{0.3\textwidth}
+        \includegraphics[width = \textwidth]{images/task_34/ba/PRG_p_dist.png}
+        \caption{BA}
+    \end{subfigure}
+    \caption{Distribution of $p$ for PRG players.}
+    \label{fig:prg_p_dist}
+\end{figure}
+
+\begin{figure}[h!]
+    \centering
+    \begin{subfigure}{0.3\textwidth}
+        \includegraphics[width = \textwidth]{images/task_34/ba/EMP_avg_strat_over_degree.png}
+        \caption{EMP}
+    \end{subfigure}
+    \hfill
+    \begin{subfigure}{0.3\textwidth}
+        \includegraphics[width = \textwidth]{images/task_34/ba/PRG_avg_strat_over_degree.png}
+        \caption{PRG}
+    \end{subfigure}
+    \hfill
+    \begin{subfigure}{0.3\textwidth}
+        \includegraphics[width = \textwidth]{images/task_34/ba/RND_avg_strat_over_degree.png}
+        \caption{RND}
+    \end{subfigure}
+    \caption{Average value of $p$ w.r.t. the degree in BA networks.}
+    \label{fig:avg_p_over_k}
+\end{figure}
+
+\paragraph{RND players} 
+Once again ER and SBM networks show similar $D(p)$ and $D(q)$ (figures \ref{fig:rnd_p_dist} and \ref{fig:rnd_q_dist}).
+BA networks are much more scattered across the $(p,q)$ strategy space with respect to homogeneous networks.
+
+\begin{figure}[h!]
+    \centering
+    \begin{subfigure}{0.3\textwidth}
+        \includegraphics[width = \textwidth]{images/task_34/er/RND_p_dist.png}
+        \caption{ER}
+    \end{subfigure}
+    \hfill
+    \begin{subfigure}{0.3\textwidth}
+        \includegraphics[width = \textwidth]{images/task_34/sbm/RND_p_dist.png}
+        \caption{SBM}
+    \end{subfigure}
+    \hfill
+    \begin{subfigure}{0.3\textwidth}
+        \includegraphics[width = \textwidth]{images/task_34/ba/RND_p_dist.png}
+        \caption{BA}
+    \end{subfigure}
+    \caption{Distribution of $p$ for RND players.}
+    \label{fig:rnd_p_dist}
+\end{figure}
+
+\begin{figure}[h!]
+    \centering
+    \begin{subfigure}{0.3\textwidth}
+        \includegraphics[width = \textwidth]{images/task_34/er/RND_q_dist.png}
+        \caption{ER}
+    \end{subfigure}
+    \hfill
+    \begin{subfigure}{0.3\textwidth}
+        \includegraphics[width = \textwidth]{images/task_34/sbm/RND_q_dist.png}
+        \caption{SBM}
+    \end{subfigure}
+    \hfill
+    \begin{subfigure}{0.3\textwidth}
+        \includegraphics[width = \textwidth]{images/task_34/ba/RND_q_dist.png}
+        \caption{BA}
+    \end{subfigure}
+    \caption{Distribution of $q$ for RND players.}
+    \label{fig:rnd_q_dist}
+\end{figure}
+
+
+\paragraph{Strategy frequency}
+Finally we can observe a difference in behaviour between ER and SBM nets (figure \ref{fig:strat_freq}).
+While ER nets tend favor just one strategy, especially for EMP and RND players, SBM nets clearly allow much more strategies to coexist in similar freqencies.
+This could be explained given the modular structure of the SBM networks.
+BA networks, as seen before, have most of their small degree nodes follow the same strategy.
+
+\begin{figure}[h!]
+    \centering
+    \begin{subfigure}{0.3\textwidth}
+        \includegraphics[width = \textwidth]{images/task_34/er/strat_freq.png}
+        \caption{ER}
+    \end{subfigure}
+    \hfill
+    \begin{subfigure}{0.3\textwidth}
+        \includegraphics[width = \textwidth]{images/task_34/sbm/strat_freq.png}
+        \caption{SBM}
+    \end{subfigure}
+    \hfill
+    \begin{subfigure}{0.3\textwidth}
+        \includegraphics[width = \textwidth]{images/task_34/ba/strat_freq.png}
+        \caption{BA}
+    \end{subfigure}
+    \caption{Frequency of the 10 most popular strategies.}
+    \label{fig:strat_freq}
+\end{figure}
+
+\section{Conclusions}
+
+Simulation results show that the evolution of game strategies greatly depends on the network's structure.
+Players in homogeneos network tend to converge to a smaller set of strategies with respect to players on scale-free networks, where instead high-degree nodes show a much greater range of values for $(p, q)$.
+
+\newpage
